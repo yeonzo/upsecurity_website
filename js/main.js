@@ -87,15 +87,62 @@
     });
   };
 
-  if (reduceMotion) {
-    showScene(scenes.length - 1);
-  } else {
-    // 장면이 뜨는 시각(ms): 첫 장면은 로드와 동시에 시작
-    [0, 1900, 3800].forEach((at, i) => {
-      if (at === 0) return;
-      setTimeout(() => showScene(i), at);
-    });
+  const transition = $('.hero-transition');
+  const meteorField = $('.meteor-field', transition);
+  let introStarted = false;
+  let skipHeroTransition = false;
+
+  // 한 번만 만드는 유성: 화면 전체에서 대각선으로 짧게 지나간다
+  if (meteorField && !reduceMotion) {
+    for (let i = 0; i < 48; i++) {
+      const meteor = document.createElement('span');
+      meteor.className = 'meteor';
+      meteor.style.setProperty('--x', `${(i * 37) % 116 - 8}%`);
+      meteor.style.setProperty('--y', `${(i * 53) % 110 - 24}%`);
+      meteor.style.setProperty('--length', `${85 + (i * 31) % 105}px`);
+      meteor.style.setProperty('--delay', `${(i * 347) % 1150}ms`);
+      meteor.style.setProperty('--duration', `${760 + (i * 97) % 440}ms`);
+      meteorField.appendChild(meteor);
+    }
   }
+
+  const startHeroTransition = () => {
+    if (!transition || openModal || skipHeroTransition || window.scrollY > Math.max(120, hero.offsetHeight * .32)) {
+      showScene(scenes.length - 1);
+      return;
+    }
+    setMenu(false);
+    document.body.classList.add('is-hero-transitioning');
+    transition.classList.add('is-closing');
+    window.setTimeout(() => {
+      transition.classList.remove('is-closing');
+      transition.classList.add('is-covered');
+      document.body.classList.add('is-meteor-covered');
+    }, 780);
+    window.setTimeout(() => {
+      document.body.classList.remove('is-meteor-covered');
+      showScene(2);
+      transition.classList.remove('is-covered');
+      transition.classList.add('is-opening');
+    }, 2780);
+    window.setTimeout(() => {
+      transition.classList.remove('is-opening');
+      document.body.classList.remove('is-hero-transitioning');
+    }, 3700);
+  };
+
+  const startHeroIntro = () => {
+    if (introStarted) return;
+    introStarted = true;
+    if (reduceMotion) { showScene(scenes.length - 1); return; }
+    window.setTimeout(() => showScene(1), 1900);
+    window.setTimeout(startHeroTransition, 3800);
+  };
+
+  $('.to-top').addEventListener('click', () => {
+    skipHeroTransition = true;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
+  });
 
   /* ---------- 노트북 화면 옆으로 넘기기 ---------- */
   const screensBox = $('[data-screens]');
@@ -285,9 +332,11 @@
   else window.addEventListener('load', setupMarquees);
 
   /* ---------- 모달 ---------- */
-  const modals = { contact: $('#modal-contact'), video: $('#modal-video') };
+  const modals = { beta: $('#modal-beta'), contact: $('#modal-contact'), video: $('#modal-video') };
   let openModal = null;
   let returnFocus = null;
+  const comingSoonToast = $('#coming-soon-toast');
+  let comingSoonTimer;
 
   const focusables = (root) =>
     $$('a[href], button:not([disabled]), input, textarea, select, video[controls], [tabindex]:not([tabindex="-1"])', root)
@@ -314,6 +363,7 @@
 
   const closeModal = ({ restoreFocus = true } = {}) => {
     if (!openModal) return;
+    const wasBeta = openModal === modals.beta;
     const video = $('video', openModal);
     if (video) video.pause();
     openModal.hidden = true;
@@ -321,6 +371,7 @@
     openModal = null;
     document.documentElement.classList.remove('modal-open');
     if (restoreFocus && returnFocus) returnFocus.focus();
+    if (wasBeta) startHeroIntro();
   };
 
   const openModalByName = (name) => {
@@ -337,6 +388,14 @@
   };
 
   document.addEventListener('click', (e) => {
+    const comingSoonButton = e.target.closest('[data-coming-soon]');
+    if (comingSoonButton) {
+      comingSoonToast.textContent = `${comingSoonButton.dataset.comingSoon}은 현재 준비 중이며 추후 공개됩니다`;
+      comingSoonToast.hidden = false;
+      window.clearTimeout(comingSoonTimer);
+      comingSoonTimer = window.setTimeout(() => { comingSoonToast.hidden = true; }, 3200);
+      return;
+    }
     const opener = e.target.closest('[data-open]');
     if (opener) {
       e.preventDefault();
@@ -358,6 +417,17 @@
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
+
+  /* ---------- 방문·새로고침마다 사전예약 팝업 표시: 전송 없는 UI 미리보기 ---------- */
+  const betaForm = $('#beta-form');
+  betaForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const invalid = $$('[required]', betaForm).filter((input) => !validate(input));
+    if (invalid.length) { invalid[0].focus(); return; }
+    $('.beta-status', betaForm).hidden = false;
+  });
+
+  openModalByName('beta');
 
   /* ---------- 도입문의 폼 ---------- */
   const form = $('#contact-form');
