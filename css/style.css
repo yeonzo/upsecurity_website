@@ -265,6 +265,18 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 .hero-outcome-tent { position: absolute; left: 50%; bottom: 0; width: 230px; transform: translateX(-50%); }
 .hero-scene-3.is-active .hero-outcome-cta { animation: fadeUp .6s .15s var(--ease) both; }
 .hero-scene-3.is-active .hero-outcome-tent { animation: tentRise .7s .1s var(--ease) both; }
+.hero-replay {
+  position: absolute; right: max(20px, calc((100vw - 1200px) / 2));
+  bottom: clamp(26px, 4vh, 46px); z-index: 2;
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 36px; padding: 6px 12px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--muted);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  animation: fadeUp .35s var(--ease) both;
+}
+.hero-replay .ic { width: 15px; height: 15px; }
+.hero-replay:hover { border-color: var(--brand-soft); color: var(--brand); }
 
 /* 검정 화면이 아래에서 올라와 덮고, 유성우 뒤 다시 아래로 내려간다 */
 .hero-transition {
@@ -1204,6 +1216,7 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 @media (max-width: 560px) {
   body { font-size: 16px; }
   .container { width: min(100% - 32px, 1200px); }
+  .hero-replay { right: 16px; bottom: 72px; }
   .hero-outcome { min-height: 362px; gap: 16px; }
   .hero-outcome-tent { width: 164px; }
   .preview { min-height: 0; }

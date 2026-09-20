@@ -89,8 +89,21 @@
 
   const transition = $('.hero-transition');
   const meteorField = $('.meteor-field', transition);
+  const heroReplay = $('#hero-replay');
+  const heroCloseMs = 780;
+  const heroMeteorMs = 1800;
+  const heroOpenMs = 920;
   let introStarted = false;
   let skipHeroTransition = false;
+  let heroTimers = [];
+  const scheduleHero = (callback, delay) => {
+    heroTimers.push(window.setTimeout(callback, delay));
+  };
+  const clearHeroTimers = () => {
+    heroTimers.forEach((timer) => window.clearTimeout(timer));
+    heroTimers = [];
+  };
+  const showHeroReplay = () => { heroReplay.hidden = false; };
 
   // 한 번만 만드는 유성: 화면 전체에서 대각선으로 짧게 지나간다
   if (meteorField && !reduceMotion) {
@@ -109,35 +122,49 @@
   const startHeroTransition = () => {
     if (!transition || openModal || skipHeroTransition || window.scrollY > Math.max(120, hero.offsetHeight * .32)) {
       showScene(scenes.length - 1);
+      showHeroReplay();
       return;
     }
     setMenu(false);
     document.body.classList.add('is-hero-transitioning');
     transition.classList.add('is-closing');
-    window.setTimeout(() => {
+    scheduleHero(() => {
       transition.classList.remove('is-closing');
       transition.classList.add('is-covered');
       document.body.classList.add('is-meteor-covered');
-    }, 780);
-    window.setTimeout(() => {
+    }, heroCloseMs);
+    scheduleHero(() => {
       document.body.classList.remove('is-meteor-covered');
       showScene(2);
       transition.classList.remove('is-covered');
       transition.classList.add('is-opening');
-    }, 2780);
-    window.setTimeout(() => {
+    }, heroCloseMs + heroMeteorMs);
+    scheduleHero(() => {
       transition.classList.remove('is-opening');
       document.body.classList.remove('is-hero-transitioning');
-    }, 3700);
+      showHeroReplay();
+    }, heroCloseMs + heroMeteorMs + heroOpenMs);
   };
 
-  const startHeroIntro = () => {
-    if (introStarted) return;
+  const startHeroIntro = (replay = false) => {
+    if (introStarted && !replay) return;
     introStarted = true;
+    clearHeroTimers();
+    heroReplay.hidden = true;
+    skipHeroTransition = false;
+    transition.classList.remove('is-closing', 'is-covered', 'is-opening');
+    document.body.classList.remove('is-hero-transitioning', 'is-meteor-covered');
+    showScene(0);
     if (reduceMotion) { showScene(scenes.length - 1); return; }
-    window.setTimeout(() => showScene(1), 1900);
-    window.setTimeout(startHeroTransition, 3800);
+    scheduleHero(() => showScene(1), 1900);
+    scheduleHero(startHeroTransition, 3800);
   };
+
+  heroReplay.addEventListener('click', () => {
+    heroReplay.blur();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    startHeroIntro(true);
+  });
 
   $('.to-top').addEventListener('click', () => {
     skipHeroTransition = true;
