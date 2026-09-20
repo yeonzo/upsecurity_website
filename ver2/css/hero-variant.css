@@ -1,0 +1,68 @@
+/* Ver.2 — forest photo hero. The rest of the site inherits the current design unchanged. */
+.hero-photo .hero {
+  color: #fff;
+  background-color: #142018;
+  background-image:
+    linear-gradient(180deg, rgba(7, 12, 9, .28) 0%, rgba(7, 12, 9, .38) 55%, rgba(7, 12, 9, .58) 100%),
+    url("../assets/hero-forest.png");
+  background-position: center center;
+  background-size: cover;
+}
+
+.hero-photo .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(238, 241, 238, .04);
+  -webkit-backdrop-filter: blur(2.5px) saturate(.84);
+  backdrop-filter: blur(2.5px) saturate(.84);
+  pointer-events: none;
+}
+
+.hero-photo .hero-stage { z-index: 1; }
+.hero-photo .site-header,
+.hero-photo .site-header.is-scrolled,
+.hero-photo .site-header.menu-open {
+  background: #fff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 1px 0 var(--line);
+}
+.hero-photo .site-header .btn-brand {
+  animation: none;
+  background: var(--ink);
+  color: #fff;
+}
+.hero-photo .site-header .btn-brand:hover,
+.hero-photo .burn-cta:hover { background: #262930; }
+.hero-photo .hero-headline,
+.hero-photo .burn-title { text-shadow: 0 3px 24px rgba(0, 0, 0, .42); }
+.hero-photo .hero-headline .em,
+.hero-photo .burn-title .em {
+  color: var(--ink);
+  text-shadow: none;
+}
+.hero-photo .burn-cta {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 14px 36px -16px rgba(0, 0, 0, .7);
+}
+.hero-photo .burn {
+  justify-content: center;
+  height: auto;
+  min-height: 360px;
+}
+.hero-photo .fire,
+.hero-photo .tent,
+.hero-photo .flare,
+.hero-photo .burn-box { display: none; }
+.hero-photo .hero-scene-3.is-active .burn-title .line > span { animation-delay: 0s; }
+.hero-photo .hero-scene-3.is-active .burn-title .line:nth-child(2) > span { animation-delay: .09s; }
+.hero-photo .hero-scene-3.is-active .burn-cta { animation: fadeUp .6s .32s var(--ease) both; }
+.hero-photo .hero-down { z-index: 2; color: rgba(255, 255, 255, .92); }
+@media (max-width: 680px) {
+  .hero-photo .hero {
+    background-position: 54% center;
+  }
+}
