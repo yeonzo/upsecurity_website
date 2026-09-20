@@ -335,6 +335,7 @@
   const modals = { beta: $('#modal-beta'), contact: $('#modal-contact'), video: $('#modal-video') };
   let openModal = null;
   let returnFocus = null;
+  let contactSubmissionVersion = 0;
   const comingSoonToast = $('#coming-soon-toast');
   let comingSoonTimer;
 
@@ -367,7 +368,10 @@
     const video = $('video', openModal);
     if (video) video.pause();
     openModal.hidden = true;
-    if (openModal === modals.contact) resetContactForm();
+    if (openModal === modals.contact) {
+      contactSubmissionVersion++;
+      resetContactForm();
+    }
     openModal = null;
     document.documentElement.classList.remove('modal-open');
     if (restoreFocus && returnFocus) returnFocus.focus();
@@ -418,13 +422,66 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
-  /* ---------- 방문·새로고침마다 사전예약 팝업 표시: 전송 없는 UI 미리보기 ---------- */
+  /* ---------- 문의·베타 접수 API ---------- */
+  const sendLead = async (kind, leadForm) => {
+    const body = Object.fromEntries(new FormData(leadForm));
+    body.kind = kind;
+    body.agree = leadForm.elements.agree.checked;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    try {
+      const endpoint = $('meta[name="campfire-lead-api"]')?.content.trim() || '/api/lead';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || '접수 서버를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요');
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요');
+      if (error instanceof TypeError) throw new Error('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요');
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  const showFormStatus = (status, message, isError = false) => {
+    status.textContent = message;
+    status.classList.toggle('is-error', isError);
+    status.hidden = false;
+  };
+
+  /* ---------- 방문·새로고침마다 사전예약 팝업 표시 ---------- */
   const betaForm = $('#beta-form');
-  betaForm.addEventListener('submit', (e) => {
+  betaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (betaForm.dataset.submitting) return;
     const invalid = $$('[required]', betaForm).filter((input) => !validate(input));
     if (invalid.length) { invalid[0].focus(); return; }
-    $('.beta-status', betaForm).hidden = false;
+    const button = $('[type="submit"]', betaForm);
+    const status = $('.beta-status', betaForm);
+    betaForm.dataset.submitting = 'true';
+    status.hidden = true;
+    button.disabled = true;
+    button.textContent = '접수 중...';
+    try {
+      await sendLead('beta', betaForm);
+      betaForm.reset();
+      showFormStatus(status, '베타 사전예약이 접수되었습니다. 체험이 시작되면 연락드릴게요');
+      button.textContent = '접수 완료';
+      $('.beta-later', modals.beta).textContent = '닫기';
+    } catch (error) {
+      showFormStatus(status, error.message, true);
+      button.disabled = false;
+      button.textContent = '사전예약하기';
+    } finally {
+      delete betaForm.dataset.submitting;
+    }
   });
 
   openModalByName('beta');
@@ -438,36 +495,66 @@
     const value = input.value.trim();
     let valid;
     if (input.type === 'checkbox') valid = input.checked;
-    else if (input.type === 'email') valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    else if (input.type === 'email') valid = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value);
+    else if (input.name === 'contact') {
+      const digits = value.replace(/\D/g, '');
+      valid = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value) ||
+        (/^\+?[\d\s().-]+$/.test(value) && digits.length >= 9 && digits.length <= 15);
+    }
     else valid = value.length > 0;
     input.closest('.field, .agree').classList.toggle('is-invalid', !valid);
     input.setAttribute('aria-invalid', String(!valid));
     return valid;
   };
 
-  form.addEventListener('input', (e) => {
-    const wrap = e.target.closest('.is-invalid');
-    if (wrap && e.target.required) validate(e.target);
-  });
-  form.addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox' && e.target.required) validate(e.target);
+  [betaForm, form].forEach((leadForm) => {
+    leadForm.addEventListener('input', (e) => {
+      const wrap = e.target.closest('.is-invalid');
+      if (wrap && e.target.required) validate(e.target);
+    });
+    leadForm.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox' && e.target.required) validate(e.target);
+    });
   });
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (form.dataset.submitting) return;
     const invalid = $$('[required]', form).filter((input) => !validate(input));
     if (invalid.length) { invalid[0].focus(); return; }
-
-    // TODO: 실제 접수 API로 전송 — new FormData(form)
-    formView.hidden = true;
-    successView.hidden = false;
-    $('.modal-title', successView).focus();
+    const button = $('[type="submit"]', form);
+    const status = $('.contact-status', form);
+    const version = ++contactSubmissionVersion;
+    form.dataset.submitting = 'true';
+    status.hidden = true;
+    button.disabled = true;
+    button.textContent = '전송 중...';
+    try {
+      await sendLead('contact', form);
+      if (version !== contactSubmissionVersion) return;
+      formView.hidden = true;
+      successView.hidden = false;
+      $('.modal-title', successView).focus();
+    } catch (error) {
+      if (version === contactSubmissionVersion) showFormStatus(status, error.message, true);
+    } finally {
+      if (version === contactSubmissionVersion) {
+        delete form.dataset.submitting;
+        button.disabled = false;
+        button.textContent = '문의 보내기';
+      }
+    }
   });
 
   function resetContactForm() {
     form.reset();
+    delete form.dataset.submitting;
+    const button = $('[type="submit"]', form);
+    button.disabled = false;
+    button.textContent = '문의 보내기';
     $$('.is-invalid', form).forEach((el) => el.classList.remove('is-invalid'));
     $$('[aria-invalid]', form).forEach((el) => el.removeAttribute('aria-invalid'));
+    $('.contact-status', form).hidden = true;
     formView.hidden = false;
     successView.hidden = true;
   }

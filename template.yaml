@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Campfire beta and contact intake API (Lambda, API Gateway, SES)
+
+Parameters:
+  SiteOrigin:
+    Type: String
+    Description: Exact public website origin, for example https://www.example.com
+  SenderEmail:
+    Type: String
+    Description: Sender email address verified directly or through its domain in SES in this AWS Region
+
+Resources:
+  LeadApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref SiteOrigin
+          - http://localhost:8000
+        AllowHeaders:
+          - content-type
+        AllowMethods:
+          - POST
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  LeadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: lead.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          SENDER_EMAIL: !Ref SenderEmail
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: '*'
+      Events:
+        LeadPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LeadApi
+            Path: /api/lead
+            Method: POST
+            PayloadFormatVersion: '2.0'
+
+Outputs:
+  LeadApiUrl:
+    Description: Set this URL in the campfire-lead-api meta tag in index.html
+    Value: !Sub 'https://${LeadApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod/api/lead'

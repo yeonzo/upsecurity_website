@@ -971,10 +971,11 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 .beta-panel { width: min(500px, calc(100vw - 24px)); }
 .beta-panel .modal-title { font-size: clamp(28px, 3.2vw, 38px); line-height: 1.22; }
 .beta-disclaimer { color: var(--muted); font-size: 12px; line-height: 1.55; }
-.beta-status {
+.form-status {
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--surface); color: var(--ink-2); font-size: 13px; line-height: 1.5;
 }
+.form-status.is-error { border-color: #F2CDCD; background: #FFF7F7; color: var(--danger-text); }
 .beta-later {
   display: block; margin: 18px auto 0; padding: 8px 12px; border: 0;
   background: transparent; color: var(--muted); font-size: 14px; cursor: pointer;
@@ -1004,6 +1005,7 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 .agree { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); cursor: pointer; }
 .agree input { width: 18px; height: 18px; accent-color: var(--ink); }
 .agree.is-invalid { color: var(--danger-text); }
+.honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
 .success-view { display: flex; flex-direction: column; align-items: center; padding: 24px 0 8px; text-align: center; }
 .success-view .btn { margin-top: 28px; min-width: 160px; }
