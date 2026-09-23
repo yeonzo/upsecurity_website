@@ -1022,6 +1022,11 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 .field textarea { resize: vertical; min-height: 104px; }
 .field input::placeholder, .field textarea::placeholder { color: var(--muted-2); }
 .field input:focus, .field textarea:focus { outline: none; border-color: var(--ink); background: #fff; box-shadow: 0 0 0 4px rgba(91, 79, 224, .25); }
+
+/* iOS Safari zooms the page in when a focused control is under 16px. */
+@media (pointer: coarse) {
+  .field input, .field textarea { font-size: 16px; }
+}
 .field-error { display: none; font-size: 12.5px; color: var(--danger-text); }
 .field.is-invalid input { border-color: var(--danger); }
 .field.is-invalid .field-error { display: block; }
