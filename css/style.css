@@ -502,7 +502,9 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
   box-shadow: 0 40px 80px -40px rgba(17, 19, 24, .55), 0 2px 6px rgba(17, 19, 24, .12);
 }
 .laptop-screen { display: flex; flex-direction: column; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 8px; background: #fff; }
-.laptop-body { flex: 1; min-height: 0; overflow: hidden; font-size: 1.75cqw; }
+.laptop-body { flex: 1; min-height: 0; overflow: hidden; font-size: 1.75cqw; touch-action: pan-y; }
+/* 손가락을 따라 움직이는 동안에는 넘김 애니메이션을 끈다 */
+.screens.is-dragging { transition: none; }
 .laptop-screen { container-type: inline-size; }
 .screens { display: flex; width: 300%; height: 100%; transition: transform .65s var(--ease); }
 .screen { position: relative; flex: none; width: 33.3333%; height: 100%; min-width: 0; background: #fff; }

@@ -218,6 +218,52 @@
     const stop = () => { if (timer) clearInterval(timer); timer = null; };
 
     dots.forEach((dot, i) => dot.addEventListener('click', () => { showScreen(i); play(); }));
+
+    // 터치로 좌우로 밀어 화면을 넘긴다. 세로로 움직이면 페이지 스크롤에 양보한다.
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let moved = 0;
+    let swiping = false;
+
+    const endSwipe = () => {
+      if (pointerId === null) return;
+      pointerId = null;
+      track.classList.remove('is-dragging');
+      const threshold = Math.max(40, screensBox.clientWidth * 0.12);
+      showScreen(swiping && Math.abs(moved) > threshold ? shown + (moved < 0 ? 1 : -1) : shown);
+      swiping = false;
+      moved = 0;
+      play();
+    };
+
+    screensBox.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' || pointerId !== null) return;
+      pointerId = e.pointerId;
+      // 손가락이 요소 밖으로 나가도 같은 제스처로 이어서 받는다
+      if (screensBox.setPointerCapture) screensBox.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      moved = 0;
+      swiping = false;
+      stop();
+    });
+
+    screensBox.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== pointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!swiping) {
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) { endSwipe(); return; }
+        if (Math.abs(dx) < 8) return;
+        swiping = true;
+        track.classList.add('is-dragging');
+      }
+      moved = dx;
+      track.style.transform = `translateX(calc(-${shown * (100 / count)}% + ${dx}px))`;
+    });
+
+    ['pointerup', 'pointercancel'].forEach((type) => screensBox.addEventListener(type, endSwipe));
     screensBox.addEventListener('mouseenter', stop);
     screensBox.addEventListener('mouseleave', play);
     document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
