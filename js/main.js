@@ -457,8 +457,8 @@
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
-      const endpoint = $('meta[name="campfire-lead-api"]')?.content.trim() || '/api/lead';
-      const response = await fetch(endpoint, {
+      // Same-origin Vercel function; see api/lead.js.
+      const response = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

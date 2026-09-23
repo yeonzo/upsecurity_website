@@ -295,6 +295,19 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
 .hero-transition.is-closing .transition-panel,
 .hero-transition.is-covered .transition-panel { transform: translateY(0); }
 .hero-transition.is-opening .transition-panel { transform: translateY(100%); }
+/* 검정 화면에 은은하게 떠 있는 흰 별 */
+.star-field { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity .3s ease; }
+.hero-transition.is-closing .star-field,
+.hero-transition.is-covered .star-field,
+.hero-transition.is-opening .star-field { opacity: 1; }
+.star {
+  position: absolute; left: var(--x); top: var(--y);
+  width: var(--size); height: var(--size); border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px 1px rgba(255, 255, 255, .8), 0 0 12px 3px rgba(255, 255, 255, .35);
+  opacity: .7; /* 모션 최소화 설정에서 애니메이션이 꺼졌을 때의 밝기 */
+  animation: starTwinkle var(--duration) var(--delay) ease-in-out infinite both;
+}
 .meteor-field { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity .2s; }
 .hero-transition.is-covered .meteor-field { opacity: 1; }
 .meteor {
@@ -1069,6 +1082,10 @@ body.is-meteor-covered .site-header .gnb a:hover { background: rgba(255, 255, 25
   100% { opacity: 1; transform: none; }
 }
 @keyframes fadeIn { from { opacity: 0; } }
+@keyframes starTwinkle {
+  0%, 100% { opacity: .4; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
 @keyframes meteorFall {
   0% { opacity: 0; transform: translate3d(-16vw, -17vh, 0) rotate(32deg); }
   12% { opacity: 1; }

@@ -1,7 +1,0 @@
-{
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@aws-sdk/client-sesv2": "3.1136.0"
-  }
-}

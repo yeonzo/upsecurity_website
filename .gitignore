@@ -1,6 +1,5 @@
 node_modules/
-lambda/node_modules/
-.aws-sam/
+.vercel/
 .env
 .env.*
 .DS_Store
