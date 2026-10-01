@@ -5,6 +5,10 @@
     "api/lead.js": {
       "memory": 256,
       "maxDuration": 10
+    },
+    "api/respond.js": {
+      "memory": 256,
+      "maxDuration": 30
     }
   },
   "headers": [

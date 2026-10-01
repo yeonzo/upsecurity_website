@@ -9,6 +9,7 @@
 | `index.html`, `css/`, `js/`, `assets/` | 정적 사이트. Vercel이 그대로 서빙합니다. |
 | `api/lead.js` | Vercel 서버리스 함수. `/api/lead` 경로로 자동 연결됩니다. |
 | `lib/lead.js` | 검증·메일 본문·SES 전송 로직. 함수와 테스트가 함께 사용합니다. |
+| `thanks.html`, `api/respond.js`, `lib/respond.js` | 콜드메일 버튼이 여는 `/thanks` 감사 페이지와 기록 중계 API. 서버에서 Apps Script 웹 앱(`doPost`)에 응답을 기록합니다. Apps Script를 **새 배포**해서 주소가 바뀌면 Vercel 환경 변수 `APPS_SCRIPT_URL`에 새 주소를 넣습니다. |
 | `vercel.json` | 함수 설정과 정적 파일 캐시 헤더. |
 | `.vercelignore` | `tests/`, `ver2/`, `ver3/` 등 배포에서 제외할 항목. |
 | `tests/` | `node --test` 단위 테스트. AWS에 연결하지 않습니다. |

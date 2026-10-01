@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UpSecurity · Campfire</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#5B4FE0">
+  <link rel="icon" href="assets/campfire-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <!-- 콜드메일의 '관심 있어요' / '다음에요' 버튼이 여는 페이지. /api/respond를 거쳐 Apps Script 시트에 기록한다. -->
+  <style>
+    :root { --bg:#F6F6FA; --card:#FFFFFF; --text:#111318; --muted:#6B7280; --line:#ECEBF2; --ok:#2F9E6E; --brand:#5B4FE0; --brand-hover:#6E63EA; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0D0F14; --card:#171B23; --text:#F2F2F5; --muted:#9AA0AA; --line:#242A35; --ok:#3DBE86; --brand-hover:#7A70F0; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text);
+           font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
+    .wrap { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+    .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line);
+            border-radius:18px; padding:44px 28px 32px; text-align:center; }
+    h1 { font-size:22px; font-weight:700; margin:16px 0 10px; }
+    p { margin:0 0 8px; line-height:1.6; }
+    .muted { color:var(--muted); font-size:14px; }
+    .btn { display:inline-block; margin:18px 0 6px; padding:12px 22px; border-radius:10px;
+           background:var(--brand); color:#fff; font-weight:600; text-decoration:none; font-size:15px; }
+    .btn:hover { background:var(--brand-hover); }
+    .link { margin-top:22px; background:none; border:0; color:var(--muted); font-size:13px;
+            text-decoration:underline; cursor:pointer; font-family:inherit; }
+    .home { display:inline-block; margin-top:28px; color:var(--muted); font-size:13px; text-decoration:none; }
+    .spinner { width:36px; height:36px; margin:8px auto 16px; border:3px solid var(--line);
+               border-top-color:var(--brand); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    [hidden] { display:none !important; }
+  </style>
+</head>
+<body>
+<main class="wrap"><div class="card">
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p class="muted">응답을 기록하고 있어요…</p>
+  </div>
+
+  <div id="done" hidden>
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+    <h1>감사합니다.</h1>
+    <p id="msg" class="muted" style="white-space:pre-line;"></p>
+    <a id="formBtn" class="btn" target="_blank" rel="noopener" hidden>지금 바로 설문 작성하기</a>
+    <p class="muted" style="font-size:13px;margin-top:14px;">이 창은 닫으셔도 됩니다.</p>
+    <button id="switchBtn" class="link" type="button"></button>
+  </div>
+
+  <div id="error" hidden>
+    <h1>앗, 기록하지 못했어요</h1>
+    <p class="muted">링크가 올바르지 않거나 일시적인 오류예요.<br>메일로 회신해 주시면 바로 확인하겠습니다.</p>
+    <button id="retryBtn" class="link" type="button">다시 시도하기</button>
+  </div>
+
+  <a class="home" href="/">upsecuritylab.com</a>
+
+</div></main>
+
+<script>
+  var params = new URLSearchParams(location.search);
+  var TOKEN = /^[\w-]{1,64}$/.test(params.get('t') || '') ? params.get('t') : '';
+  var answer = params.get('a') === 'yes' ? 'yes' : 'no';
+
+  function show(id) {
+    ['loading', 'done', 'error'].forEach(function (k) {
+      document.getElementById(k).hidden = (k !== id);
+    });
+  }
+
+  function render(r) {
+    if (!r || !r.ok) { show('error'); return; }
+    answer = r.answer;
+    var msg = document.getElementById('msg');
+    var formBtn = document.getElementById('formBtn');
+    if (r.answer === 'yes') {
+      msg.textContent = r.email
+        ? r.email + ' 주소로 짧은 설문을 보내드렸어요.\n확인 후 제가 따로 연락드릴게요.'
+        : '확인 후 제가 따로 연락드릴게요.';
+      formBtn.href = r.formUrl || '#';
+      formBtn.hidden = !r.formUrl;
+    } else {
+      msg.textContent = '응답해주셔서 감사합니다. 다음에 더 좋은 소식으로 찾아뵙겠습니다.';
+      formBtn.hidden = true;
+    }
+    document.getElementById('switchBtn').textContent =
+      r.answer === 'yes' ? '잘못 누르셨나요? "다음에요"로 바꾸기' : '잘못 누르셨나요? "관심 있어요"로 바꾸기';
+    show('done');
+  }
+
+  function record(a) {
+    show('loading');
+    fetch('/api/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: TOKEN, a: a })
+    })
+      .then(function (res) { return res.json(); })
+      .then(render)
+      .catch(function () { show('error'); });
+  }
+
+  document.getElementById('switchBtn').addEventListener('click', function () {
+    record(answer === 'yes' ? 'no' : 'yes');
+  });
+  document.getElementById('retryBtn').addEventListener('click', function () {
+    record(answer);
+  });
+
+  if (TOKEN) record(answer);
+  else { document.getElementById('retryBtn').hidden = true; show('error'); }
+</script>
+</body>
+</html>
