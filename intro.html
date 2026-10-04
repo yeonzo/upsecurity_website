@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campfire 소개 | UpSecurity</title>
+  <!-- QR 전용 페이지. 홈페이지에서 링크하지 않고 검색엔진에도 노출하지 않는다.
+       영상이 끝나면(또는 버튼을 누르면) 사전예약 팝업 → /api/reserve → Apps Script 시트의 '사전예약' 탭에 기록.
+       QR마다 ?src=코드 를 붙이면 시트의 '유입' 칸에 남는다 (예: /intro?src=booth). -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#5B4FE0">
+  <link rel="icon" href="assets/campfire-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    :root { --bg:#F6F6FA; --card:#FFFFFF; --text:#111318; --muted:#6B7280; --line:#ECEBF2; --field:#FFFFFF;
+            --danger:#C4262E; --brand:#5B4FE0; --brand-hover:#6E63EA; --brand-pale:#EEECFD; --brand-soft:#D7D1FB; --brand-text:#3C31A8;
+            --ghost:#F1F1F5; --ghost-hover:#E7E7EE; --scrim:rgba(17,19,24,.45); }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0D0F14; --card:#171B23; --text:#F2F2F5; --muted:#9AA0AA; --line:#2A303C; --field:#11141A;
+              --danger:#FF7A7F; --brand-hover:#7A70F0; --brand-pale:#262250; --brand-soft:#3A3477; --brand-text:#C9C3FF;
+              --ghost:#232833; --ghost-hover:#2C3240; --scrim:rgba(0,0,0,.6); }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); word-break:keep-all; overflow-wrap:anywhere;
+           font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
+    [hidden] { display:none !important; }
+    button, input, textarea { font:inherit; color:inherit; }
+
+    /* 페이지 */
+    .page { width:min(100% - 32px, 760px); margin:0 auto; padding:24px 0 48px; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; color:var(--text); text-decoration:none; }
+    .brand img { width:32px; height:32px; }
+    .brand small { color:var(--muted); font-weight:500; font-size:13px; }
+    .hero { margin:36px 0 20px; }
+    .eyebrow { display:inline-block; padding:4px 12px; border-radius:999px; background:var(--brand-pale); color:var(--brand-text);
+               font-size:13px; font-weight:700; }
+    h1 { margin:14px 0 10px; font-size:clamp(26px, 6vw, 36px); line-height:1.3; letter-spacing:-.01em; }
+    .lede { margin:0; color:var(--muted); font-size:16px; line-height:1.65; }
+    .video { position:relative; aspect-ratio:16/9; border-radius:16px; overflow:hidden; background:#000;
+             box-shadow:0 18px 40px rgba(17,19,24,.18); }
+    .video iframe, .video #player { position:absolute; inset:0; width:100%; height:100%; border:0; }
+    .cta { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:24px; text-align:center; }
+    .hint { margin:0; color:var(--muted); font-size:14px; }
+    .big { width:min(100%, 360px); height:56px; border:0; border-radius:14px; background:var(--brand); color:#fff;
+           font-size:17px; font-weight:700; cursor:pointer; }
+    .big:hover { background:var(--brand-hover); }
+    .home { margin-top:36px; text-align:center; }
+    .home a { color:var(--muted); font-size:13px; }
+
+    /* 팝업 공통 */
+    .scrim { position:fixed; inset:0; background:var(--scrim); display:flex; align-items:center; justify-content:center;
+             padding:16px; animation:fade .18s ease-out; z-index:10; }
+    .modal { position:relative; width:100%; max-width:520px; max-height:calc(100dvh - 32px); overflow:auto;
+             background:var(--card); border-radius:20px; padding:32px 28px 28px; box-shadow:0 24px 60px rgba(17,19,24,.25);
+             animation:rise .22s ease-out; }
+    @keyframes fade { from { opacity:0; } }
+    @keyframes rise { from { opacity:0; transform:translateY(12px); } }
+    .close, .back { position:absolute; top:16px; width:36px; height:36px; border:0; border-radius:10px; background:none;
+                    color:var(--muted); cursor:pointer; display:grid; place-items:center; }
+    .close { right:16px; }
+    .back { left:16px; }
+    .close:hover, .back:hover { background:var(--ghost); color:var(--text); }
+    .modal h2 { margin:0 0 8px; font-size:22px; line-height:1.35; }
+    .desc { margin:0 0 20px; color:var(--muted); font-size:15px; line-height:1.6; }
+    .chip { display:inline-block; margin-bottom:10px; padding:3px 10px; border-radius:999px; background:var(--brand-pale);
+            color:var(--brand-text); font-size:12px; font-weight:700; }
+
+    /* ① 기업 / 개인 선택 */
+    .choices { display:grid; gap:12px; }
+    .choice { display:flex; align-items:center; gap:16px; width:100%; padding:18px; border:1px solid var(--line);
+              border-radius:16px; background:var(--card); text-align:left; cursor:pointer; }
+    .choice:hover { border-color:var(--brand); background:var(--brand-pale); }
+    .choice .ic { flex:none; width:52px; height:52px; border-radius:14px; background:var(--brand-pale); color:var(--brand);
+                  display:grid; place-items:center; }
+    .choice b { display:block; font-size:17px; margin-bottom:2px; }
+    .choice span { color:var(--muted); font-size:14px; }
+    .choice .arrow { margin-left:auto; color:var(--muted); }
+
+    /* ② 입력 */
+    .with-back { padding-top:60px; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; margin-bottom:6px; font-size:14px; font-weight:600; }
+    .field label em { color:var(--muted); font-style:normal; font-weight:400; }
+    .field input, .field textarea { width:100%; padding:13px 14px; border:1px solid var(--line); border-radius:12px;
+                                    background:var(--field); font-size:16px; line-height:1.5; }
+    .field textarea { min-height:120px; resize:vertical; }
+    .field input::placeholder, .field textarea::placeholder { color:var(--muted); opacity:.85; }
+    .field input:focus, .field textarea:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-pale); }
+    .field [aria-invalid="true"] { border-color:var(--danger); }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .agree { display:flex; gap:10px; align-items:flex-start; margin:6px 0 0; font-size:14px; line-height:1.5; cursor:pointer; }
+    .agree input { flex:none; width:20px; height:20px; margin:1px 0 0; accent-color:var(--brand); }
+    .agree small { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+    .err { margin:12px 0 0; color:var(--danger); font-size:14px; }
+    .submit { width:100%; height:54px; margin-top:20px; border:0; border-radius:12px; background:var(--brand); color:#fff;
+              font-size:16px; font-weight:700; cursor:pointer; }
+    .submit:hover { background:var(--brand-hover); }
+    .submit:disabled { opacity:.6; cursor:default; }
+    .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+    /* ③ 완료 */
+    .center { text-align:center; padding-bottom:0; overflow:hidden; }
+    .center h2 { font-size:24px; margin:10px 0 14px; }
+    .lead { margin:0 0 12px; font-size:15px; font-weight:500; line-height:1.65; }
+    .sub { margin:0 0 24px; color:var(--muted); font-size:13px; line-height:1.65; }
+    .stack { display:grid; gap:10px; }
+    .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .stack button, .stack a { display:flex; align-items:center; justify-content:center; height:50px; border-radius:12px;
+                              font-size:15px; font-weight:700; cursor:pointer; text-decoration:none; }
+    .primary { border:0; background:var(--brand); color:#fff; }
+    .primary:hover { background:var(--brand-hover); }
+    .soft { border:1px solid var(--brand-soft); background:var(--brand-pale); color:var(--brand-text); }
+    .soft:hover { filter:brightness(.97); }
+    .stack button:focus-visible, .stack a:focus-visible, .choice:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+    .foot { margin:24px -28px 0; padding:14px 20px; border-top:1px solid var(--line); background:var(--ghost);
+            color:var(--muted); font-size:12px; }
+
+    @media (max-width:480px) {
+      .modal { padding:28px 20px 20px; }
+      .with-back { padding-top:56px; }
+      .center { padding-bottom:0; }
+      .foot { margin:22px -20px 0; }
+      .row2 { grid-template-columns:1fr; gap:0; }
+      .modal h2 { font-size:20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .scrim, .modal { animation:none; } }
+  </style>
+</head>
+<body>
+<main class="page">
+  <a class="brand" href="/"><img src="assets/campfire-mark.svg" alt=""> Campfire <small>by UpSecurity</small></a>
+
+  <section class="hero">
+    <span class="eyebrow">베타 사전예약</span>
+    <h1>AI는 그대로 쓰고,<br>정보 유출은 Campfire가 막아요</h1>
+    <p class="lede">Campfire는 ChatGPT·Claude·Gemini 같은 생성형 AI를 쓸 때 개인정보와 사내 기밀 유출, 프롬프트 인젝션을 막아주는 보안 솔루션이에요.</p>
+  </section>
+
+  <div class="video"><div id="player"></div></div>
+
+  <div class="cta">
+    <p class="hint">영상이 끝나면 사전예약 안내가 열려요</p>
+    <button id="openBtn" class="big" type="button">바로 사전예약하기</button>
+  </div>
+
+  <p class="home"><a href="/">upsecuritylab.com 둘러보기</a></p>
+</main>
+
+<div id="reserve" class="scrim" hidden>
+
+  <!-- ① 기업 / 개인 -->
+  <div id="stepType" class="modal" role="dialog" aria-modal="true" aria-labelledby="typeTitle">
+    <button class="close" type="button" data-close aria-label="닫기">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <span class="chip">Campfire 베타 사전예약</span>
+    <h2 id="typeTitle">어떤 분이신가요?</h2>
+    <p class="desc">해당하는 쪽을 골라주세요. 1분이면 끝나요.</p>
+    <div class="choices">
+      <button class="choice" type="button" data-type="company">
+        <span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3"/></svg></span>
+        <span><b>기업</b><span>회사·기관에서 도입을 검토해요</span></span>
+        <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <button class="choice" type="button" data-type="personal">
+        <span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4 4.2-6 8-6s6.8 2 8 6"/></svg></span>
+        <span><b>개인</b><span>개인적으로 써보고 싶어요</span></span>
+        <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ② 정보 입력 -->
+  <form id="stepForm" class="modal with-back" role="dialog" aria-modal="true" aria-labelledby="formTitle" novalidate hidden>
+    <button id="backBtn" class="back" type="button" aria-label="이전">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+    </button>
+    <button class="close" type="button" data-close aria-label="닫기">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2 id="formTitle">기업 정보를 알려주세요</h2>
+    <p class="desc">베타가 준비되면 남겨주신 연락처로 가장 먼저 안내드려요.</p>
+
+    <div data-company>
+      <div class="row2">
+        <div class="field"><label for="company">기업명</label><input id="company" name="company" maxlength="80" autocomplete="organization"></div>
+        <div class="field"><label for="department">부서 <em>(선택)</em></label><input id="department" name="department" maxlength="60"></div>
+      </div>
+    </div>
+    <div class="field"><label for="name">성함</label><input id="name" name="name" maxlength="40" autocomplete="name"></div>
+    <div class="field"><label for="contact">연락처</label><input id="contact" name="contact" maxlength="120" autocomplete="email" placeholder="이메일 또는 휴대폰 번호"></div>
+    <div class="field">
+      <label for="concern">AI 사용 시 정보보호 고민 <em>(선택)</em></label>
+      <textarea id="concern" name="concern" maxlength="1000" placeholder="예: AI에 문서를 넣기 전에 개인정보를 일일이 지워야 해요.&#10;사내 기밀이 AI에 입력될까 걱정돼요."></textarea>
+    </div>
+    <div class="hp" aria-hidden="true"><label>웹사이트 <input name="website" tabindex="-1" autocomplete="off"></label></div>
+    <label class="agree">
+      <input id="agree" type="checkbox">
+      <span>입력한 정보를 Campfire 베타 사전예약 안내에 이용하는 데 동의합니다 (필수)
+        <small>안내가 끝나거나 요청하시면 바로 삭제합니다.</small></span>
+    </label>
+    <p id="formError" class="err" role="alert" hidden></p>
+    <button id="submitBtn" class="submit" type="submit">사전예약 완료하기</button>
+  </form>
+
+  <!-- ③ 완료 -->
+  <div id="stepDone" class="modal center" role="dialog" aria-modal="true" aria-labelledby="doneTitle" hidden>
+    <button class="close" type="button" data-close aria-label="닫기">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <svg width="148" height="88" viewBox="0 0 148 88" fill="none" aria-hidden="true">
+      <path d="M6 66h30a7 7 0 0 0 0-14 9 9 0 0 0-16-5 7 7 0 0 0-12 6 6.5 6.5 0 0 0-2 13z" fill="var(--ghost)" stroke="var(--line)"/>
+      <path d="M112 66h30a6.5 6.5 0 0 0-2-13 7 7 0 0 0-12-6 9 9 0 0 0-16 5 7 7 0 0 0 0 14z" fill="var(--ghost)" stroke="var(--line)"/>
+      <circle cx="74" cy="50" r="30" fill="var(--brand-pale)"/>
+      <path d="M61 50.5l9 9 17-18" stroke="var(--brand)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h2 id="doneTitle">사전예약이 완료되었습니다!</h2>
+    <p class="lead">Campfire 베타가 준비되면<br>남겨주신 연락처로 가장 먼저 안내드리겠습니다.</p>
+    <p class="sub">남겨주신 고민은 저희 팀이 해결해보겠습니다.<br>주변에 필요한 분이 계시다면 이 페이지를 공유해주셔도 감사하겠습니다.</p>
+    <div class="stack">
+      <button class="primary" type="button" data-close>확인</button>
+      <div class="pair">
+        <button id="replayBtn" class="soft" type="button">영상 다시 보기</button>
+        <a class="soft" href="/">홈페이지 둘러보기</a>
+      </div>
+    </div>
+    <p class="foot">UpSecurity 팀이 직접 확인 후 연락드릴 예정입니다.</p>
+  </div>
+</div>
+
+<script>
+  var VIDEO_ID = '6cuInm6xFHw';
+  var EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+  var SRC = (new URLSearchParams(location.search).get('src') || '').slice(0, 40);
+  var $ = function (id) { return document.getElementById(id); };
+  var scrim = $('reserve'), form = $('stepForm');
+  var type = 'company', done = false, player = null;
+
+  function validPhone(v) {
+    var digits = v.replace(/\D/g, '');
+    return /^\+?[\d\s().-]+$/.test(v) && digits.length >= 9 && digits.length <= 15;
+  }
+
+  function step(id) {
+    ['stepType', 'stepForm', 'stepDone'].forEach(function (k) { $(k).hidden = (k !== id); });
+  }
+
+  function openReserve() {
+    if (player && player.pauseVideo) player.pauseVideo();
+    scrim.hidden = false;
+    step(done ? 'stepDone' : 'stepType');
+  }
+
+  function closeReserve() { scrim.hidden = true; }
+
+  function chooseType(t) {
+    type = t;
+    form.querySelector('[data-company]').hidden = t !== 'company';
+    $('formTitle').textContent = t === 'company' ? '기업 정보를 알려주세요' : '정보를 알려주세요';
+    $('concern').placeholder = t === 'company'
+      ? '예: AI에 문서를 넣기 전에 개인정보를 일일이 지워야 해요.\n사내 기밀이 AI에 입력될까 걱정돼요.'
+      : '예: AI에 문서를 넣기 전에 개인정보를 일일이 지워야 해요.';
+    $('formError').hidden = true;
+    step('stepForm');
+    (t === 'company' ? $('company') : $('name')).focus();
+  }
+
+  function showError(msg, field) {
+    $('formError').textContent = msg;
+    $('formError').hidden = false;
+    if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
+  }
+
+  document.querySelectorAll('[data-type]').forEach(function (b) {
+    b.addEventListener('click', function () { chooseType(b.getAttribute('data-type')); });
+  });
+  document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeReserve); });
+  scrim.addEventListener('click', function (e) { if (e.target === scrim) closeReserve(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !scrim.hidden) closeReserve(); });
+  $('openBtn').addEventListener('click', openReserve);
+  $('backBtn').addEventListener('click', function () { step('stepType'); });
+  $('replayBtn').addEventListener('click', function () {
+    closeReserve();
+    if (player && player.seekTo) { player.seekTo(0); player.playVideo(); }
+  });
+  form.querySelectorAll('input, textarea').forEach(function (el) {
+    el.addEventListener('input', function () { el.removeAttribute('aria-invalid'); });
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('formError').hidden = true;
+    var v = function (id) { return $(id).value.trim(); };
+    var data = {
+      type: type, name: v('name'), contact: v('contact'), concern: v('concern'),
+      agree: $('agree').checked, website: form.elements.website.value, src: SRC
+    };
+    if (type === 'company') {
+      data.company = v('company');
+      data.department = v('department');
+      if (!data.company) return showError('기업명을 입력해 주세요.', $('company'));
+    }
+    if (!data.name) return showError('성함을 입력해 주세요.', $('name'));
+    if (!data.contact) return showError('연락처를 입력해 주세요.', $('contact'));
+    if (!(EMAIL.test(data.contact) || validPhone(data.contact))) {
+      return showError('이메일이나 휴대폰 번호 형식을 확인해 주세요.', $('contact'));
+    }
+    if (!data.agree) return showError('개인정보 이용에 동의해 주세요.', null);
+
+    var btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '보내는 중…';
+    fetch('/api/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then(function (res) { return res.json().then(function (r) { return { status: res.status, r: r }; }); })
+      .then(function (x) {
+        if (!x.r || !x.r.ok) throw x.status;
+        done = true;
+        $('openBtn').textContent = '사전예약 완료 ✓';
+        step('stepDone');
+      })
+      .catch(function (status) {
+        showError(status === 400 ? '입력한 내용을 다시 확인해 주세요.' : '저장하지 못했어요. 잠시 후 다시 눌러 주세요.', null);
+      })
+      .then(function () { btn.disabled = false; btn.textContent = '사전예약 완료하기'; });
+  });
+
+  // 유튜브 영상: 끝까지 보면 사전예약 팝업을 연다 (API가 막혀도 버튼으로 열 수 있다)
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('player', {
+      videoId: VIDEO_ID,
+      playerVars: { rel: 0, playsinline: 1, modestbranding: 1 },
+      events: {
+        onStateChange: function (e) { if (e.data === YT.PlayerState.ENDED && !done) openReserve(); }
+      }
+    });
+  };
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+</script>
+</body>
+</html>

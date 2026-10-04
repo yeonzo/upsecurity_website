@@ -9,6 +9,10 @@
     "api/respond.js": {
       "memory": 256,
       "maxDuration": 30
+    },
+    "api/reserve.js": {
+      "memory": 256,
+      "maxDuration": 30
     }
   },
   "headers": [
