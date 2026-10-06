@@ -1,6 +1,6 @@
 import test, { afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRespondService } from '../lib/respond.js';
+import { createRespondService, createSheetRecorder } from '../lib/respond.js';
 
 afterEach(() => mock.restoreAll());
 
@@ -62,4 +62,23 @@ test('Apps Script 오류 시 실패를 반환한다', async () => {
   const result = await createRespondService(async () => { throw new Error('down'); })(request({ t: 'abc', a: 'no' }));
   assert.equal(result.statusCode, 502);
   assert.equal(result.body.ok, false);
+});
+
+test('첫 시트에 토큰이 없으면 다음 시트에서 찾아 기록한다', async () => {
+  const call = mock.fn(async (url) => (url === 'B' ? { ok: true, answer: 'yes' } : { ok: false }));
+  const r = await createSheetRecorder(['A', 'B'], call)({ action: 'record', t: 'abc', a: 'yes' });
+  assert.deepEqual(r, { ok: true, answer: 'yes' });
+  assert.deepEqual(call.mock.calls.map((c) => c.arguments[0]), ['A', 'B']);
+});
+
+test('첫 시트에서 찾으면 다음 시트는 부르지 않는다', async () => {
+  const call = mock.fn(async () => ({ ok: true, answer: 'no' }));
+  await createSheetRecorder(['A', 'B'], call)({ action: 'record', t: 'abc', a: 'no' });
+  assert.equal(call.mock.calls.length, 1);
+});
+
+test('어느 시트에도 없으면 ok: false, 한 곳이라도 오류면 오류를 던진다', async () => {
+  assert.deepEqual(await createSheetRecorder(['A', 'B'], async () => ({ ok: false }))({}), { ok: false });
+  const flaky = async (url) => { if (url === 'A') throw new Error('down'); return { ok: false }; };
+  await assert.rejects(createSheetRecorder(['A', 'B'], flaky)({}), /down/);
 });
